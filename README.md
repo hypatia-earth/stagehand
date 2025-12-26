@@ -50,6 +50,10 @@ Add to your project's `.claude/settings.json`:
 
 See [SKILL.md](SKILL.md) for full documentation.
 
+## Credits
+
+Inspired by [playwright-skill](https://github.com/lackeyjb/playwright-skill)
+
 ## License
 
 MIT
