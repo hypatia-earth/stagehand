@@ -6,7 +6,7 @@
  * - Collects and returns console logs
  */
 
-const { firefox } = require('playwright');
+const { firefox, chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 
@@ -15,6 +15,14 @@ const RESULT_FILE = path.join(__dirname, '.browser-result');
 const READY_FILE = path.join(__dirname, '.browser-ready');
 
 let browser, context, page;
+
+// Helper: in persistent mode browser=context which lacks isConnected()
+function isBrowserConnected() {
+  if (!browser) return false;
+  if (typeof browser.isConnected === 'function') return isBrowserConnected();
+  // Persistent context - check if pages exist
+  try { return browser.pages().length > 0; } catch { return false; }
+}
 let consoleLogs = [];
 let isRestarting = false;
 let lastURL = 'about:blank';
@@ -24,23 +32,28 @@ let startTime = Date.now();
 const args = process.argv.slice(2);
 const sizeArg = args.find(arg => arg.startsWith('--size='))?.split('=')[1] || 'dev';
 const persistArg = args.includes('--persist');
+const browserArg = args.find(arg => arg.startsWith('--browser='))?.split('=')[1] || 'firefox';
+const browserEngine = browserArg === 'chrome' ? chromium : firefox;
+const chromeOptions = browserArg === 'chrome' ? { channel: 'chrome' } : {};
 const USER_DATA_DIR = path.join(__dirname, '.browser-data');
 
 async function startBrowser() {
-  console.log('Starting browser...' + (persistArg ? ' (persistent mode)' : ''));
+  console.log(`Starting ${browserArg} browser...` + (persistArg ? ' (persistent mode)' : ''));
 
   if (persistArg) {
     // Persistent context - preserves IndexedDB, cookies, localStorage
-    context = await firefox.launchPersistentContext(USER_DATA_DIR, {
+    context = await browserEngine.launchPersistentContext(USER_DATA_DIR, {
       headless: false,
-      viewport: null
+      viewport: null,
+      ...chromeOptions
     });
     browser = context; // In persistent mode, context acts as browser
     page = context.pages()[0] || await context.newPage();
   } else {
     // Fresh context - no persistence
-    browser = await firefox.launch({
-      headless: false
+    browser = await browserEngine.launch({
+      headless: false,
+      ...chromeOptions
     });
     context = await browser.newContext({
       viewport: null
@@ -104,7 +117,7 @@ async function ensureBrowserReady() {
 
   try {
     // Check if browser is disconnected or page is closed
-    needsRestart = !browser || !browser.isConnected();
+    needsRestart = !browser || !isBrowserConnected();
 
     if (!needsRestart && page) {
       // Try to check if page is still valid by calling a method
@@ -126,7 +139,7 @@ async function ensureBrowserReady() {
     console.log('Browser/page closed, restarting...');
     isRestarting = true;
     try {
-      if (browser && browser.isConnected()) {
+      if (browser && isBrowserConnected()) {
         await browser.close().catch(() => {});
       }
       await startBrowser();
@@ -165,8 +178,9 @@ function setupPageListeners() {
 
   // Window close detection - shutdown daemon when user closes window
   page.on('close', async () => {
+    if (isRestarting) return; // Don't shutdown during restart
     console.log('Window closed by user (Cmd-W or red button), shutting down...');
-    if (browser && browser.isConnected()) {
+    if (browser && isBrowserConnected()) {
       await browser.close().catch(() => {});
     }
     cleanup();
@@ -174,6 +188,7 @@ function setupPageListeners() {
   });
 
   context.on('close', async () => {
+    if (isRestarting) return; // Don't shutdown during restart
     console.log('Browser context closed, shutting down...');
     cleanup();
     process.exit(0);
@@ -195,7 +210,7 @@ async function startDaemon() {
   // Cleanup on exit
   process.on('SIGINT', async () => {
     console.log('\nShutting down...');
-    if (browser && browser.isConnected()) {
+    if (browser && isBrowserConnected()) {
       await browser.close();
     }
     cleanup();
@@ -398,8 +413,8 @@ async function executeCommandInner(command) {
           sizePreset: sizeArg
         },
         browser: {
-          connected: browser.isConnected(),
-          browserType: 'firefox',
+          connected: isBrowserConnected(),
+          browserType: browserArg,
           version: browserVersion
         },
         page: {
@@ -416,11 +431,32 @@ async function executeCommandInner(command) {
       writeResult({ success: true, message: 'Shutting down...' });
       // Give time for result to be written
       setTimeout(async () => {
-        if (browser && browser.isConnected()) {
+        if (browser && isBrowserConnected()) {
           await browser.close().catch(() => {});
         }
         cleanup();
         process.exit(0);
+      }, 100);
+      break;
+
+    case 'restart':
+      console.log('Restart command received');
+      writeResult({ success: true, message: 'Restarting browser...' });
+      // Close current browser and start fresh
+      isRestarting = true;
+      setTimeout(async () => {
+        try {
+          if (browser) {
+            await browser.close().catch(() => {});
+          }
+          consoleLogs = [];
+          await startBrowser();
+          console.log('Browser restarted successfully');
+        } catch (err) {
+          console.error('Failed to restart browser:', err.message);
+        } finally {
+          isRestarting = false;
+        }
       }, 100);
       break;
 

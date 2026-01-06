@@ -291,6 +291,21 @@ async function main() {
         }
         break;
 
+      case 'restart':
+        command = { action: 'restart', data: {} };
+        result = await sendCommand(command);
+
+        if (result.success) {
+          console.log('Restart command sent:', result.message);
+          console.log('Waiting for browser to restart...');
+          // Wait for browser to restart
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          console.log('Browser restarted.');
+        } else {
+          console.error('Error:', result.error);
+        }
+        break;
+
       case 'list':
         // Check for .browser-ready file to determine if daemon is running
         if (fs.existsSync(READY_FILE)) {
@@ -328,6 +343,7 @@ async function main() {
         console.log('  node browser-client.js status');
         console.log('  node browser-client.js inspect');
         console.log('  node browser-client.js shutdown');
+        console.log('  node browser-client.js restart');
         console.log('  node browser-client.js list');
         process.exit(1);
     }
