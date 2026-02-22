@@ -21,22 +21,22 @@ npm install
 
 Start the daemon:
 ```bash
-node ~/.claude/skills/playwright-skill/browser-daemon.js --browser firefox --size dev
+~/.claude/skills/playwright-skill/browser-daemon.js --size=dev --persist
 ```
 
 Send commands:
 ```bash
 # Navigate
-node ~/.claude/skills/playwright-skill/browser-client.js goto "https://example.com"
+~/.claude/skills/playwright-skill/browser-client.js navigate "https://example.com"
 
 # Execute JavaScript
-node ~/.claude/skills/playwright-skill/browser-client.js exec "document.title"
+~/.claude/skills/playwright-skill/browser-client.js exec "document.title"
 
 # Read console logs
-node ~/.claude/skills/playwright-skill/browser-client.js console
+~/.claude/skills/playwright-skill/browser-client.js console
 
 # Clear console
-node ~/.claude/skills/playwright-skill/browser-client.js console-clear
+~/.claude/skills/playwright-skill/browser-client.js console-clear
 ```
 
 ## Claude Code Integration

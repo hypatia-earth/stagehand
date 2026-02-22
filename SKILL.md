@@ -1,25 +1,26 @@
 ---
 name: Browser Daemon
 description: Persistent browser automation via Playwright daemon. Keep a browser window open and send it commands (navigate, execute JS, inspect console). Perfect for interactive debugging, development, and testing web applications. Use when you need to interact with a browser repeatedly without opening/closing it.
-version: 7.2.0
+version: 8.0.0
 author: hypatia-earth
 tags: [browser, automation, debugging, playwright, daemon, console-logs, screenshots]
 ---
 
 # Browser Daemon - Persistent Browser Automation
 
-Persistent browser daemon that keeps Chrome open and accepts commands via file-based IPC.
+Persistent browser daemon that keeps a browser open and accepts commands via file-based IPC.
 
 ## Quick Start
 
 ### Start the daemon (once per session)
 
 ```bash
-cd ~/.claude/skills/playwright-skill
-node browser-daemon.js [--size=quarter|dev|full|WIDTHxHEIGHT] [--persist]
+~/.claude/skills/playwright-skill/browser-daemon.js [--browser=firefox|chrome] [--size=quarter|dev|full|WIDTHxHEIGHT] [--persist]
 ```
 
 **Options:**
+- `--browser=firefox` - Use Firefox (default)
+- `--browser=chrome` - Use Google Chrome (not Chromium)
 - `--size=dev` - Fixed 900×860 viewport (default, good for development)
 - `--size=quarter` - Screen size divided by 2 (e.g., 1512×948 → 756×474)
 - `--size=full` - Full screen size
@@ -33,36 +34,34 @@ The browser window opens and stays open.
 ### Send commands
 
 ```bash
-cd ~/.claude/skills/playwright-skill
-
 # Navigate
-node browser-client.js navigate "http://localhost:8080/..."
+~/.claude/skills/playwright-skill/browser-client.js navigate "http://localhost:8080/..."
 
 # Reload current page
-node browser-client.js reload
+~/.claude/skills/playwright-skill/browser-client.js reload
 
 # Execute JavaScript
-node browser-client.js exec "document.title"
-node browser-client.js exec "document.querySelectorAll('div').length"
+~/.claude/skills/playwright-skill/browser-client.js exec "document.title"
+~/.claude/skills/playwright-skill/browser-client.js exec "document.querySelectorAll('div').length"
 
 # Console logs
-node browser-client.js console
-node browser-client.js console-clear
+~/.claude/skills/playwright-skill/browser-client.js console
+~/.claude/skills/playwright-skill/browser-client.js console-clear
 
 # Status & Inspection
-node browser-client.js status
-node browser-client.js inspect
-node browser-client.js list
+~/.claude/skills/playwright-skill/browser-client.js status
+~/.claude/skills/playwright-skill/browser-client.js inspect
+~/.claude/skills/playwright-skill/browser-client.js list
 
 # Screenshots
-node browser-client.js screenshot /path/to/output.png
-node browser-client.js screenshot /path/to/output.png fullpage
+~/.claude/skills/playwright-skill/browser-client.js screenshot /path/to/output.png
+~/.claude/skills/playwright-skill/browser-client.js screenshot /path/to/output.png fullpage
 
 # Resize viewport
-node browser-client.js resize 1920 1080
+~/.claude/skills/playwright-skill/browser-client.js resize 1920 1080
 
 # Shutdown
-node browser-client.js shutdown
+~/.claude/skills/playwright-skill/browser-client.js shutdown
 ```
 
 ### Window close behavior
@@ -81,7 +80,7 @@ browser-client.js (writes .browser-command)
     ↓
 browser-daemon.js (polls, executes, writes .browser-result)
     ↓
-Chrome Browser (Playwright-controlled)
+Browser (Firefox/Chrome, Playwright-controlled)
 ```
 
 **IPC Files:**
@@ -96,49 +95,49 @@ Files created/deleted automatically during operation.
 ### navigate
 Navigate to URL and wait for page load. Clears console logs.
 ```bash
-node browser-client.js navigate "http://localhost:8080/page"
+~/.claude/skills/playwright-skill/browser-client.js navigate "http://localhost:8080/page"
 ```
 Returns: `{ success: true, url: string, title: string }`
 
 ### reload
 Reload current page (like F5 or Cmd-R). Clears console logs.
 ```bash
-node browser-client.js reload
+~/.claude/skills/playwright-skill/browser-client.js reload
 ```
 Returns: `{ success: true, url: string, title: string }`
 
 ### exec
 Execute JavaScript in browser context.
 ```bash
-node browser-client.js exec "document.querySelectorAll('div').length"
+~/.claude/skills/playwright-skill/browser-client.js exec "document.querySelectorAll('div').length"
 ```
 Returns: `{ success: true, result: any }`
 
 ### console
 Get all captured console logs.
 ```bash
-node browser-client.js console
+~/.claude/skills/playwright-skill/browser-client.js console
 ```
 Returns: `{ success: true, logs: [{ type, text, location }] }`
 
 ### console-clear
 Clear console log buffer.
 ```bash
-node browser-client.js console-clear
+~/.claude/skills/playwright-skill/browser-client.js console-clear
 ```
 Returns: `{ success: true }`
 
 ### status
 Check daemon status and current page info.
 ```bash
-node browser-client.js status
+~/.claude/skills/playwright-skill/browser-client.js status
 ```
 Returns: `{ success: true, url, title, consoleLogsCount }`
 
 ### inspect
 Get detailed daemon status information.
 ```bash
-node browser-client.js inspect
+~/.claude/skills/playwright-skill/browser-client.js inspect
 ```
 Returns detailed status including:
 - Process: PID, uptime, memory usage, size preset
@@ -149,7 +148,7 @@ Returns detailed status including:
 ### list
 Check if daemon is running and show basic info.
 ```bash
-node browser-client.js list
+~/.claude/skills/playwright-skill/browser-client.js list
 ```
 Shows daemon status and suggests how to start if not running.
 
@@ -159,9 +158,9 @@ Capture screenshot of current page.
 **IMPORTANT:** This command writes files to disk and requires explicit user permission before use.
 
 ```bash
-node browser-client.js screenshot /path/to/output.png
-node browser-client.js screenshot /path/to/output.png fullpage
-node browser-client.js screenshot /path/to/output.png .selector
+~/.claude/skills/playwright-skill/browser-client.js screenshot /path/to/output.png
+~/.claude/skills/playwright-skill/browser-client.js screenshot /path/to/output.png fullpage
+~/.claude/skills/playwright-skill/browser-client.js screenshot /path/to/output.png .selector
 ```
 Returns: `{ success: true, path: string, selector?: string }`
 
@@ -178,9 +177,9 @@ Capture canvas/element screenshot without UI overlay.
 Temporarily hides UI elements, captures the canvas, then restores UI. Perfect for WebGPU/WebGL canvas screenshots without overlaid controls.
 
 ```bash
-node browser-client.js screenshot-clean /path/to/output.png
-node browser-client.js screenshot-clean /path/to/output.png .scene-canvas
-node browser-client.js screenshot-clean /path/to/output.png .scene-canvas #app
+~/.claude/skills/playwright-skill/browser-client.js screenshot-clean /path/to/output.png
+~/.claude/skills/playwright-skill/browser-client.js screenshot-clean /path/to/output.png .scene-canvas
+~/.claude/skills/playwright-skill/browser-client.js screenshot-clean /path/to/output.png .scene-canvas #app
 ```
 Returns: `{ success: true, path: string, selector: string, hidden: string }`
 
@@ -192,14 +191,14 @@ Arguments:
 ### resize
 Resize browser viewport.
 ```bash
-node browser-client.js resize 1920 1080
+~/.claude/skills/playwright-skill/browser-client.js resize 1920 1080
 ```
 Returns: `{ success: true, width, height }`
 
 ### shutdown
 Gracefully shutdown the daemon.
 ```bash
-node browser-client.js shutdown
+~/.claude/skills/playwright-skill/browser-client.js shutdown
 ```
 Returns: `{ success: true, message: string }`
 
@@ -219,35 +218,32 @@ Useful for automation - ensures page is fully initialized before taking screensh
 **Automated sequence: open → navigate → wait → screenshot → cleanup**
 
 ```bash
-# Start daemon with dev size viewport
-node browser-daemon.js --size=dev &
-
-# Wait for daemon to start
-sleep 3
+# Start daemon with dev size viewport (use run_in_background, not &)
+~/.claude/skills/playwright-skill/browser-daemon.js --size=dev --persist
 
 # Navigate to target URL
-node browser-client.js navigate http://localhost:8080
+~/.claude/skills/playwright-skill/browser-client.js navigate http://localhost:8080
 
 # Wait for page to signal it's loaded (smart wait)
 ./wait-for-load.sh
 
 # Take screenshot
-node browser-client.js screenshot /path/to/screenshot.png
+~/.claude/skills/playwright-skill/browser-client.js screenshot /path/to/screenshot.png
 
 # Clean shutdown
-node browser-client.js shutdown
+~/.claude/skills/playwright-skill/browser-client.js shutdown
 ```
 
 **Alternative: Manual timing**
 ```bash
 # Navigate to target URL
-node browser-client.js navigate http://localhost:8080
+~/.claude/skills/playwright-skill/browser-client.js navigate http://localhost:8080
 
 # Wait for page to fully load (fixed wait)
 sleep 5
 
 # Verify page loaded by checking console
-node browser-client.js console | tail -20
+~/.claude/skills/playwright-skill/browser-client.js console | tail -20
 ```
 
 This workflow is perfect for:
@@ -258,7 +254,7 @@ This workflow is perfect for:
 
 ## Daemon Behavior
 
-- Launches Chrome (not Chromium) for H.264 codec support
+- Default browser: Firefox (`--browser=chrome` for Chrome)
 - Viewport size configured at startup via `--size` flag
 - Automatically captures all console output (log, warn, error, debug, pageerror)
 - Polls for commands every 100ms
@@ -267,12 +263,14 @@ This workflow is perfect for:
 
 ## Browser Configuration
 
-```javascript
-chromium.launch({
-  channel: 'chrome',      // Use Google Chrome, not Chromium
-  headless: false,        // Visible window
-  args: ['--start-maximized']
-})
+Default: Firefox. Use `--browser=chrome` for Chrome.
+
+```bash
+# Firefox (default)
+~/.claude/skills/playwright-skill/browser-daemon.js --size=dev
+
+# Chrome
+~/.claude/skills/playwright-skill/browser-daemon.js --browser=chrome --size=dev
 ```
 
 Viewport size set after launch based on `--size` preset or calculated from screen dimensions.
@@ -283,7 +281,7 @@ Viewport size set after launch based on `--size` preset or calculated from scree
 - Playwright controls viewport independently from window
 - Manually resizing browser window does NOT change viewport
 - Window resize does NOT trigger JavaScript resize events
-- Use `resize` command instead: `node browser-client.js resize 1024 768`
+- Use `resize` command instead: `~/.claude/skills/playwright-skill/browser-client.js resize 1024 768`
 
 **DevTools overlay:**
 - Opening DevTools does NOT resize viewport - overlays on top
@@ -319,13 +317,13 @@ Viewport size set after launch based on `--size` preset or calculated from scree
 **Daemon not responding:**
 ```bash
 # Check if daemon is running
-node browser-client.js list
+~/.claude/skills/playwright-skill/browser-client.js list
 
 # Or check for ready file
 ls ~/.claude/skills/playwright-skill/.browser-ready
 
 # Restart daemon
-cd ~/.claude/skills/playwright-skill && node browser-daemon.js
+~/.claude/skills/playwright-skill/browser-daemon.js
 ```
 
 **Commands timing out:**
@@ -347,16 +345,15 @@ rm -f ~/.claude/skills/playwright-skill/.browser-*
 
 **Browser window closed accidentally:**
 - Daemon automatically shuts down when window is closed
-- Start new daemon: `node browser-daemon.js [--size=...]`
+- Start new daemon: `~/.claude/skills/playwright-skill/browser-daemon.js [--size=...]`
 
 ## Setup (First Time)
 
 ```bash
-cd ~/.claude/skills/playwright-skill
-npm install
+cd ~/.claude/skills/playwright-skill && npm install
 ```
 
-This installs Playwright and downloads Chrome browser.
+This installs Playwright and downloads browser binaries.
 
 ## Advanced Capabilities
 
@@ -371,26 +368,34 @@ See `META_COMMANDS.md` for comprehensive reference of Playwright's meta-level ca
 
 ## Integration Notes
 
+**The daemon survives context compaction.** It runs as an independent OS process with file-based IPC — no in-memory state to lose. After context compaction, always check with `list` before assuming the daemon is gone. Never start a second daemon without checking first.
+
 When user requests browser interaction:
-1. Check if daemon is running: `node browser-client.js list`
-2. If not running, start daemon **in background** (it never returns):
+1. **Always check first:** `~/.claude/skills/playwright-skill/browser-client.js list`
+2. Only if not running, start daemon with `run_in_background` (it never returns):
    ```bash
-   node ~/.claude/skills/playwright-skill/browser-daemon.js --size=dev &
+   ~/.claude/skills/playwright-skill/browser-daemon.js --size=dev --persist
    ```
 3. Use `browser-client.js` commands (these return quickly):
    ```bash
-   node ~/.claude/skills/playwright-skill/browser-client.js navigate "http://example.com"
+   ~/.claude/skills/playwright-skill/browser-client.js navigate "http://example.com"
    ```
 4. Report results back to user
 5. Shutdown when done: `browser-client.js shutdown` (or let user close window)
 
-**Important:** The daemon process runs forever until shutdown. Always start with `&` or as a background task.
+**Important:** The daemon process runs forever until shutdown. Always start with `run_in_background: true`.
 
 User can request additional features - the codebase is straightforward and well-documented for extensions.
 
 ## Version History
 
-**v7.2.0 (Current)**
+**v8.0.0 (Current)**
+- Default browser changed from Chrome to Firefox (`--browser=chrome` to switch)
+- Clean process cleanup: browser PID tracked and killed on exit, no orphan processes
+- Simplified shutdown: any close/quit/crash exits daemon cleanly
+- Removed crash recovery (ensureBrowserReady) — daemon exits, user restarts
+
+**v7.2.0**
 - `--persist` flag: preserves IndexedDB, localStorage, cookies across restarts
 - Data stored in `.browser-data/` directory
 

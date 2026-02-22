@@ -14,7 +14,7 @@ const READY_FILE = path.join(__dirname, '.browser-ready');
 function checkDaemonRunning() {
   if (!fs.existsSync(READY_FILE)) {
     console.error('Browser daemon not running!');
-    console.error('Start it with: node browser-daemon.js');
+    console.error('Start it with: ~/.claude/skills/playwright-skill/browser-daemon.js --size=dev &');
     process.exit(1);
   }
 }
@@ -323,7 +323,7 @@ async function main() {
           }
         } else {
           console.log('No browser daemon is running');
-          console.log('Start it with: node browser-daemon.js [--size=quarter|dev|full|WxH]');
+          console.log('Start it with: ~/.claude/skills/playwright-skill/browser-daemon.js --size=dev &');
         }
         break;
 

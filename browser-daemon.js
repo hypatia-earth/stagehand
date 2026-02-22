@@ -15,17 +15,17 @@ const RESULT_FILE = path.join(__dirname, '.browser-result');
 const READY_FILE = path.join(__dirname, '.browser-ready');
 
 let browser, context, page;
+let browserPid = null;
 
 // Helper: in persistent mode browser=context which lacks isConnected()
 function isBrowserConnected() {
   if (!browser) return false;
-  if (typeof browser.isConnected === 'function') return isBrowserConnected();
+  if (typeof browser.isConnected === 'function') return browser.isConnected();
   // Persistent context - check if pages exist
   try { return browser.pages().length > 0; } catch { return false; }
 }
 let consoleLogs = [];
 let isRestarting = false;
-let lastURL = 'about:blank';
 let startTime = Date.now();
 
 // Parse command line args
@@ -48,6 +48,7 @@ async function startBrowser() {
       ...chromeOptions
     });
     browser = context; // In persistent mode, context acts as browser
+    browserPid = browser.process?.()?.pid || null;
     page = context.pages()[0] || await context.newPage();
   } else {
     // Fresh context - no persistence
@@ -55,6 +56,7 @@ async function startBrowser() {
       headless: false,
       ...chromeOptions
     });
+    browserPid = browser.process?.()?.pid || null;
     context = await browser.newContext({
       viewport: null
     });
@@ -112,53 +114,6 @@ async function startBrowser() {
   setupPageListeners();
 }
 
-async function ensureBrowserReady() {
-  let needsRestart = false;
-
-  try {
-    // Check if browser is disconnected or page is closed
-    needsRestart = !browser || !isBrowserConnected();
-
-    if (!needsRestart && page) {
-      // Try to check if page is still valid by calling a method
-      try {
-        await page.title();
-      } catch (err) {
-        // If page.title() throws, page is closed/invalid
-        needsRestart = true;
-      }
-    } else {
-      needsRestart = true;
-    }
-  } catch (err) {
-    // Any error means we need to restart
-    needsRestart = true;
-  }
-
-  if (needsRestart) {
-    console.log('Browser/page closed, restarting...');
-    isRestarting = true;
-    try {
-      if (browser && isBrowserConnected()) {
-        await browser.close().catch(() => {});
-      }
-      await startBrowser();
-
-      // Restore last URL if not about:blank
-      if (lastURL && lastURL !== 'about:blank') {
-        console.log(`Restoring last URL: ${lastURL}`);
-        await page.goto(lastURL, { waitUntil: 'networkidle', timeout: 30000 }).catch(err => {
-          console.log(`Failed to restore URL: ${err.message}`);
-        });
-      }
-    } catch (err) {
-      console.error('Failed to restart browser:', err);
-      throw err;
-    } finally {
-      isRestarting = false;
-    }
-  }
-}
 
 function setupPageListeners() {
   // Collect console logs (silently - client will display them)
@@ -176,11 +131,11 @@ function setupPageListeners() {
     consoleLogs.push({ type: 'pageerror', text: error.message, stack: error.stack });
   });
 
-  // Window close detection - shutdown daemon when user closes window
+  // Any close (window, quit, crash) = shutdown daemon
   page.on('close', async () => {
-    if (isRestarting) return; // Don't shutdown during restart
-    console.log('Window closed by user (Cmd-W or red button), shutting down...');
-    if (browser && isBrowserConnected()) {
+    if (isRestarting) return;
+    console.log('Browser closed, shutting down...');
+    if (isBrowserConnected()) {
       await browser.close().catch(() => {});
     }
     cleanup();
@@ -188,7 +143,7 @@ function setupPageListeners() {
   });
 
   context.on('close', async () => {
-    if (isRestarting) return; // Don't shutdown during restart
+    if (isRestarting) return;
     console.log('Browser context closed, shutting down...');
     cleanup();
     process.exit(0);
@@ -240,18 +195,7 @@ async function executeCommand(command) {
   try {
     await executeCommandInner(command);
   } catch (err) {
-    // If command failed due to closed browser/page, restart and retry once
-    if (err.message.includes('closed') || err.message.includes('disconnected')) {
-      console.log('Command failed, restarting browser...');
-      try {
-        await ensureBrowserReady();
-        await executeCommandInner(command);
-      } catch (retryErr) {
-        writeResult({ error: retryErr.message });
-      }
-    } else {
-      writeResult({ error: err.message });
-    }
+    writeResult({ error: err.message });
   }
 }
 
@@ -263,7 +207,6 @@ async function executeCommandInner(command) {
       // Clear console logs on navigation (mimics browser behavior)
       consoleLogs = [];
       await page.goto(data.url, { waitUntil: 'networkidle', timeout: 30000 });
-      lastURL = page.url(); // Remember this URL
       writeResult({
         success: true,
         url: page.url(),
@@ -469,7 +412,18 @@ function writeResult(data) {
   fs.writeFileSync(RESULT_FILE, JSON.stringify(data, null, 2));
 }
 
+function killBrowserProcess() {
+  if (!browserPid) return;
+  try {
+    process.kill(browserPid, 'SIGKILL');
+  } catch {
+    // already dead
+  }
+  browserPid = null;
+}
+
 function cleanup() {
+  killBrowserProcess();
   [COMMAND_FILE, RESULT_FILE, READY_FILE].forEach(file => {
     if (fs.existsSync(file)) {
       fs.unlinkSync(file);
