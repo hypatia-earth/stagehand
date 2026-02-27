@@ -257,9 +257,11 @@ async function executeCommandInner(command) {
     case 'screenshot':
       const screenshotPath = data.path || path.join(__dirname, 'screenshot.png');
       if (data.selector) {
-        // Element screenshot - captures specific element only
+        // Element screenshot via page.screenshot + clip (avoids stability timeout on animated pages)
         const element = page.locator(data.selector);
-        await element.screenshot({ path: screenshotPath });
+        const box = await element.boundingBox();
+        if (!box) throw new Error(`Element not found: ${data.selector}`);
+        await page.screenshot({ path: screenshotPath, clip: box });
       } else {
         await page.screenshot({
           path: screenshotPath,
