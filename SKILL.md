@@ -27,7 +27,11 @@ Persistent browser daemon that keeps a browser open and accepts commands via fil
 - `--size=1024x768` - Custom width×height
 - `--persist` - Preserve IndexedDB, localStorage, cookies across restarts
 
-Or ask: "Start the browser daemon in the background"
+**Claude Code pattern:** Start daemon as background Bash task (visible in status bar), send commands in foreground:
+```
+Bash(command: "/.../browser-daemon.js --persist --size=dev", run_in_background: true)
+Bash(command: "/.../browser-client.js navigate https://...")
+```
 
 The browser window opens and stays open.
 
@@ -56,6 +60,7 @@ The browser window opens and stays open.
 # Screenshots
 ~/.claude/skills/playwright-skill/browser-client.js screenshot /path/to/output.png
 ~/.claude/skills/playwright-skill/browser-client.js screenshot /path/to/output.png fullpage
+~/.claude/skills/playwright-skill/browser-client.js screenshot /path/to/output.png .css-selector
 
 # Resize viewport
 ~/.claude/skills/playwright-skill/browser-client.js resize 1920 1080
